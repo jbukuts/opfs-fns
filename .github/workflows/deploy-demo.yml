@@ -33,12 +33,12 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Build Storybook
-        run: npm run build
+        run: npm run build:demo
 
       - name: nojekyll
-        run: touch ./storybook-static/.nojekyll
+        run: touch ./demo/dist/.nojekyll
 
       - name: Deploy Static Site
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: storybook-static
+          folder: demo/dist
