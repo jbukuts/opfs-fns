@@ -14,11 +14,16 @@ import {
 } from './ui/sidebar';
 import {
   File,
+  FileCode,
+  FileImage,
   FilePlus,
+  FileText,
+  FileVideo,
   Folder,
   FolderOpen,
   FolderPlus,
   Import,
+  LucideIcon,
   RefreshCw
 } from 'lucide-react';
 import {
@@ -27,7 +32,6 @@ import {
   CollapsibleTrigger
 } from './ui/collapsible';
 import opfs from 'opfs-fns';
-import useCurrentFile from '#/hooks/use-current-file';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -43,13 +47,36 @@ import {
   DialogTrigger
 } from './ui/dialog';
 import useFileTree, { TreeItem } from '#/hooks/use-file-tree';
-import { refreshFileTree } from '#/lib/utils';
+import { hrByteSize, refreshFileTree } from '#/lib/utils';
 import CreateItem from './create-item';
 import ImportItem from './import-item';
 import AboutFile from './about-file';
+import { createElement, useEffect, useState } from 'react';
+import useCurrentPath from '#/hooks/use-current-path';
+
+const special: Record<string, LucideIcon> = {
+  javascript: FileCode
+};
+
+const FILE_ICONS = new Proxy<Record<string, LucideIcon>>(
+  {
+    text: FileText,
+    image: FileImage,
+    video: FileVideo
+  },
+  {
+    get(target, prop, rec) {
+      if (typeof prop !== 'string') return File;
+      const [a, b] = prop.split('/');
+      if (b in special) return special[b];
+      if (!(a in target)) return File;
+      return Reflect.get(target, a, rec);
+    }
+  }
+);
 
 function Tree({ items }: { items: TreeItem }) {
-  const { currentPath, setCurrentPath } = useCurrentFile();
+  const [currentPath, setCurrentPath] = useCurrentPath();
 
   return items.map((entry) => {
     const { name, children, fullPath, type } = entry;
@@ -70,7 +97,7 @@ function Tree({ items }: { items: TreeItem }) {
       });
     };
 
-    if (!children)
+    if (!children) {
       return (
         <Dialog key={`${name}-${type}`}>
           <ContextMenu>
@@ -79,7 +106,7 @@ function Tree({ items }: { items: TreeItem }) {
                 onClick={() => setCurrentPath(fullPath)}
                 isActive={fullPath === currentPath}
                 className='data-[active=true]:bg-transparent'>
-                <File />
+                {createElement(FILE_ICONS[entry.mime!])}
                 {name}
               </SidebarMenuButton>
             </ContextMenuTrigger>
@@ -101,6 +128,7 @@ function Tree({ items }: { items: TreeItem }) {
           </DialogContent>
         </Dialog>
       );
+    }
 
     return (
       <SidebarMenuItem key={`${name}-${type}`}>
@@ -135,6 +163,25 @@ function Tree({ items }: { items: TreeItem }) {
 
 export default function AppSidebar() {
   const fileTree = useFileTree();
+  const [estimate, setEstimate] = useState<StorageEstimate>({
+    usage: 0,
+    quota: 1
+  });
+
+  useEffect(() => {
+    const refreshEstimate = () => {
+      navigator.storage.estimate().then((e) => {
+        if (!e.usage) return;
+        setEstimate(e);
+      });
+    };
+
+    document.addEventListener('refresh-explorer', refreshEstimate);
+    document.dispatchEvent(new Event('refresh-explorer'));
+    return () => {
+      document.removeEventListener('refresh-explorer', refreshEstimate);
+    };
+  }, []);
 
   return (
     <Sidebar className='border-gray-800'>
@@ -148,7 +195,6 @@ export default function AppSidebar() {
             onClick={refreshFileTree}>
             <RefreshCw />
           </SidebarGroupAction>
-
           <SidebarGroupContent>
             <SidebarMenu>
               <Tree items={fileTree} />
@@ -157,22 +203,29 @@ export default function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu className='flex flex-row justify-end gap-0.5'>
-          <CreateItem type='file'>
-            <Button variant={'ghost'} size={'icon'}>
-              <FilePlus />
-            </Button>
-          </CreateItem>
-          <CreateItem type='directory'>
-            <Button variant={'ghost'} size={'icon'}>
-              <FolderPlus />
-            </Button>
-          </CreateItem>
-          <ImportItem>
-            <Button variant={'ghost'} size={'icon'}>
-              <Import />
-            </Button>
-          </ImportItem>
+        <SidebarMenu className='flex flex-row items-center justify-between'>
+          <p className='text-xs text-gray-300'>
+            {estimate.usage && hrByteSize(estimate.usage, true)}/
+            {estimate.quota && hrByteSize(estimate.quota, true)}
+          </p>
+
+          <div className='flex gap-0.5'>
+            <CreateItem type='file'>
+              <Button variant={'ghost'} size={'icon'}>
+                <FilePlus />
+              </Button>
+            </CreateItem>
+            <CreateItem type='directory'>
+              <Button variant={'ghost'} size={'icon'}>
+                <FolderPlus />
+              </Button>
+            </CreateItem>
+            <ImportItem>
+              <Button variant={'ghost'} size={'icon'}>
+                <Import />
+              </Button>
+            </ImportItem>
+          </div>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

@@ -34,6 +34,7 @@ interface FileStat {
     dir: string;
     size: number;
     updated: number;
+    type: string;
 }
 /**
  * Get file information.
@@ -95,6 +96,9 @@ interface TreeItem {
     type: FileSystemHandleKind;
     fullPath: string;
     children?: TreeItem[] | null;
+    mime?: string;
+    size?: number;
+    modified?: number;
 }
 interface LsOpts {
     path?: PathType;

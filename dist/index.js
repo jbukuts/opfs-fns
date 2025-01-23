@@ -51,9 +51,10 @@ async function deleteItem(opts) {
 async function statFile(path) {
   try {
     const handle = await getHandle({ type: "file", path });
-    const { name, size, lastModified: updated } = await handle.getFile();
+    const { name, size, lastModified: updated, type } = await handle.getFile();
     return {
       name,
+      type,
       dir: "",
       size,
       updated
@@ -161,27 +162,42 @@ async function existsFile(path) {
 
 async function ls(opts) {
   const { path = "/", recursive = false, flat = false } = opts;
-  const list = [];
+  const promises = [];
   try {
     const dirHandle = await getHandle({ type: "dir", path });
     const pathArr = splitPath(path);
     for await (const [name, handle] of dirHandle.entries()) {
       const fullPath = p.posix.join("/", ...pathArr, name);
       const { kind: type } = handle;
-      list.push({
-        name,
-        type,
-        fullPath,
-        ...recursive && !flat && type === "directory" ? {
-          children: await ls({ path: fullPath, recursive, flat })
-        } : {}
-      });
-      if (recursive && flat && type === "directory") {
-        const l = await ls({ path: fullPath, recursive, flat });
-        list.splice(0, 0, ...l);
+      if (type === "file") {
+        promises.push(
+          handle.getFile().then((f) => ({
+            name,
+            fullPath,
+            type,
+            mime: f.type,
+            size: f.size,
+            modified: f.lastModified
+          }))
+        );
+      } else {
+        promises.push(
+          (async () => {
+            return {
+              name,
+              type,
+              fullPath,
+              ...!flat && recursive ? { children: await ls({ path: fullPath, recursive, flat }) } : {}
+            };
+          })()
+        );
+        if (flat && recursive) {
+          const l = await ls({ path: fullPath, recursive, flat });
+          promises.splice(0, 0, ...l);
+        }
       }
     }
-    return list;
+    return await Promise.all(promises);
   } catch {
     return null;
   }

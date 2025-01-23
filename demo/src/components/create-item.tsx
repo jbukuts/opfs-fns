@@ -14,6 +14,7 @@ import { Input } from './ui/input';
 import opfs from 'opfs-fns';
 import { refreshFileTree } from '#/lib/utils';
 import { useToast } from '#/hooks/use-toast';
+import useCurrentPath from '#/hooks/use-current-path';
 
 const ABSOLUTE_PATH_REGEX = /^(\/([^/\0]+\/?)*|\/)$/;
 
@@ -29,6 +30,8 @@ export default function CreateItem(props: CreateItemProps) {
   const [input, setInput] = useState<string>('');
   const [valid, setValid] = useState<boolean>(true);
   const [open, setOpen] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_, setCurrentPath] = useCurrentPath();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,6 +46,7 @@ export default function CreateItem(props: CreateItemProps) {
         if (!s) return;
         refreshFileTree();
         setOpen(false);
+        if (type === 'file') setCurrentPath(startingPath + input);
         toast({
           title: `New ${type} created`,
           description: `${type} created at "${startingPath + input}"`

@@ -1,27 +1,52 @@
-import useCurrentFile from '#/hooks/use-current-file';
 import TextEdit from './text-edit';
 import ImageDisplay from './image-display';
 import VideoDisplay from './video-display';
+import useCurrentPath from '#/hooks/use-current-path';
+import { createElement, useEffect, useState } from 'react';
+import opfs from 'opfs-fns';
 
-const TEXT_FILE_TYPES = [
-  '.md',
-  '.txt',
-  '.yml',
-  '.yaml',
-  '.toml',
-  '.css',
-  '.html',
-  '.js'
-];
-const IMG_FILE_TYPES = ['.png', '.jpg', '.jpg', '.gif'];
-const VIDEO_FILE_TYPES = ['.mp4', '.webm'];
-
-function extMatch(path: string, exts: string[]) {
-  return exts.some((e) => path.endsWith(e));
-}
+type DisplayComp = typeof TextEdit | typeof VideoDisplay | typeof ImageDisplay;
+const MIME_COMP_MAP = new Proxy<Record<string, DisplayComp>>(
+  {
+    text: TextEdit,
+    video: VideoDisplay,
+    image: ImageDisplay
+  },
+  {
+    get(target, prop, rec) {
+      if (typeof prop !== 'string') return File;
+      const [a] = prop.split('/');
+      if (!(a in target)) return TextEdit;
+      return Reflect.get(target, a, rec);
+    }
+  }
+);
 
 export default function FileViewer() {
-  const { currentPath, data } = useCurrentFile();
+  const [currentPath] = useCurrentPath();
+  const [data, setData] = useState<ArrayBuffer>();
+  const [type, setType] = useState<string>();
+
+  useEffect(() => {
+    if (!currentPath) {
+      setData(undefined);
+      return;
+    }
+
+    const loader = async () => {
+      setData(undefined);
+      const meta = await opfs.file.stat(currentPath);
+      if (meta === null) return;
+      setType(meta.type.split('/')[0]);
+
+      const d = await opfs.file.read({ path: currentPath, type: 'bytes' });
+      if (d === null) return;
+
+      setData(d as ArrayBuffer);
+    };
+
+    loader();
+  }, [currentPath]);
 
   return (
     <div className='h-full'>
@@ -32,15 +57,7 @@ export default function FileViewer() {
       )}
       {data !== undefined &&
         currentPath !== '' &&
-        (() => {
-          if (extMatch(currentPath, TEXT_FILE_TYPES))
-            return <TextEdit data={data} path={currentPath} />;
-          else if (extMatch(currentPath, IMG_FILE_TYPES))
-            return <ImageDisplay data={data} />;
-          else if (extMatch(currentPath, VIDEO_FILE_TYPES))
-            return <VideoDisplay data={data} />;
-          return <TextEdit data={data} path={currentPath} />;
-        })()}
+        createElement(MIME_COMP_MAP[type ?? ''], { data, path: currentPath })}
     </div>
   );
 }

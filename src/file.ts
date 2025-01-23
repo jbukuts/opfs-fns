@@ -36,6 +36,7 @@ interface FileStat {
   dir: string;
   size: number;
   updated: number;
+  type: string;
 }
 
 /**
@@ -46,9 +47,10 @@ interface FileStat {
 export async function statFile(path: PathType): Promise<FileStat | null> {
   try {
     const handle = await getHandle({ type: 'file', path });
-    const { name, size, lastModified: updated } = await handle.getFile();
+    const { name, size, lastModified: updated, type } = await handle.getFile();
     return {
       name: name,
+      type,
       dir: '',
       size: size,
       updated

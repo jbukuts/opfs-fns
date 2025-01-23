@@ -95,6 +95,8 @@ The `data` param in both the `create` and `write` can also accept byte data
 
 ## Limitations
 
-Operations are designed to be stateless meaning that each is executed in a vaacuum with no knowledge of what the filesystem currently looks like. This is done so that no side effects occur if you decide to manually mutate the OPFS outside this wrapper APIs functions.
+Operations are to be executed in a vaacuum with no knowledge of what the filesystem currently looks like. This is done so that no side effects occur if you decide to manually mutate the OPFS outside this wrapper APIs functions.
 
-Currently the `move` and `rename` operations are not optimal. There are currently various proposals to extend the base OPFS API to handle operations like `.remove()` and `.move()` but as of the time of writing this (Jan 2025) they are not widely implemented. As such the rename/move operations essentially just use the other APIs under-the-hood to copy and paste data to new locations.
+For instance, if you were to create a nested file and then write to it as seperate operations the handle to file is grabbed twice. This is not optimal speed-wise but ensures that no operation is ever working with stale file handle references.
+
+Lastly, the `move` and `rename` operations are not optimal. There are currently various proposals to extend the base OPFS API to handle operations like `.remove()` and `.move()` but as of the time of writing this (Jan 2025) they are not widely implemented across browsers. As such the rename/move operations essentially just use the other APIs under-the-hood to copy and paste data to new locations.

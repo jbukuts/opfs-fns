@@ -8,9 +8,7 @@ export default function useFileTree() {
 
   useEffect(() => {
     const refreshTree = () => {
-      console.log('refreshing tree');
       opfs.dir.ls({ recursive: true }).then((t) => {
-        console.log(t);
         if (t !== null) setTree(t);
       });
     };

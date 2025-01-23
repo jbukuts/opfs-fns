@@ -12,9 +12,11 @@ import {
   DialogTitle
 } from './components/ui/dialog';
 import { Button } from './components/ui/button';
+import { isOPFSSupported } from './lib/utils';
 
 function App() {
   const [firstTime, setFirstTime] = useLocalStorage('first-visit', true);
+  const isSupported = isOPFSSupported();
 
   return (
     <SidebarProvider>
@@ -23,7 +25,7 @@ function App() {
         <FileViewer />
       </main>
       <Toaster />
-      <Dialog open={firstTime} onOpenChange={setFirstTime}>
+      <Dialog open={firstTime && isSupported} onOpenChange={setFirstTime}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>OPFS Functions Demo</DialogTitle>

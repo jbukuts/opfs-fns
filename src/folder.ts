@@ -8,6 +8,9 @@ interface TreeItem {
   type: FileSystemHandleKind;
   fullPath: string;
   children?: TreeItem[] | null;
+  mime?: string;
+  size?: number;
+  modified?: number;
 }
 
 interface LsOpts {
@@ -40,7 +43,7 @@ interface RenameDirOpts {
  */
 export async function ls(opts: LsOpts): Promise<TreeItem[] | null> {
   const { path = '/', recursive = false, flat = false } = opts;
-  const list: TreeItem[] = [];
+  const promises: (Promise<TreeItem> | TreeItem)[] = [];
 
   try {
     const dirHandle = await getHandle({ type: 'dir', path });
@@ -48,24 +51,40 @@ export async function ls(opts: LsOpts): Promise<TreeItem[] | null> {
     for await (const [name, handle] of dirHandle.entries()) {
       const fullPath = p.posix.join('/', ...pathArr, name);
       const { kind: type } = handle;
-      list.push({
-        name,
-        type,
-        fullPath,
-        ...(recursive && !flat && type === 'directory'
-          ? {
-              children: await ls({ path: fullPath, recursive, flat })
-            }
-          : {})
-      });
 
-      if (recursive && flat && type === 'directory') {
-        const l = await ls({ path: fullPath, recursive, flat });
-        list.splice(0, 0, ...l!);
+      if (type === 'file') {
+        promises.push(
+          (handle as FileSystemFileHandle).getFile().then((f) => ({
+            name,
+            fullPath,
+            type,
+            mime: f.type,
+            size: f.size,
+            modified: f.lastModified
+          }))
+        );
+      } else {
+        promises.push(
+          (async () => {
+            return {
+              name,
+              type,
+              fullPath,
+              ...(!flat && recursive
+                ? { children: await ls({ path: fullPath, recursive, flat }) }
+                : {})
+            };
+          })()
+        );
+
+        if (flat && recursive) {
+          const l = await ls({ path: fullPath, recursive, flat });
+          promises.splice(0, 0, ...l!);
+        }
       }
     }
 
-    return list;
+    return await Promise.all(promises);
   } catch {
     return null;
   }

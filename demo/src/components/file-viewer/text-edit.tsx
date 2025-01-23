@@ -8,7 +8,7 @@ const DECODER = new TextDecoder('utf-8');
 
 export default function TextEdit(props: { data: ArrayBuffer; path: string }) {
   const { data, path } = props;
-  const [text, setText] = useState<string>(DECODER.decode(data));
+  const [text, setText] = useState<string>();
   const { toast } = useToast();
 
   const debounced = useDebounceCallback((t: string) => {
@@ -33,7 +33,7 @@ export default function TextEdit(props: { data: ArrayBuffer; path: string }) {
 
   return (
     <Textarea
-      className='h-screen border-none focus-visible:ring-0'
+      className='h-screen resize-none border-none focus-visible:ring-0'
       placeholder='Type text here'
       value={text}
       onChange={handleTextChange}

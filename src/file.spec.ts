@@ -21,9 +21,15 @@ describe('opfs', () => {
       const path = '/test.txt';
       expect(await opfs.file.create({ path })).toBe(true);
       expect(await opfs.file.exists(path)).toBe(true);
-      expect(await opfs.dir.ls({ path: '/' })).toStrictEqual([
-        { name: 'test.txt', type: 'file', fullPath: '/test.txt' }
-      ]);
+      expect(await opfs.dir.ls({ path: '/' })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'test.txt',
+            type: 'file',
+            fullPath: '/test.txt'
+          })
+        ])
+      );
     });
 
     // Currently mock API doesnt implement options for createWritable so this fails as it appends
@@ -47,9 +53,15 @@ describe('opfs', () => {
     it('can create nested file', async () => {
       const path = '/nested/test.txt';
       expect(await opfs.file.create({ path, recursive: true })).toBe(true);
-      expect(await opfs.dir.ls({ path: '/nested' })).toStrictEqual([
-        { name: 'test.txt', type: 'file', fullPath: '/nested/test.txt' }
-      ]);
+      expect(await opfs.dir.ls({ path: '/nested' })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'test.txt',
+            type: 'file',
+            fullPath: '/nested/test.txt'
+          })
+        ])
+      );
     });
 
     it('will fail to create when path is invalid', async () => {
@@ -113,7 +125,7 @@ describe('opfs', () => {
       expect(
         await opfs.file.write({
           path: '/fake/test.txt',
-          data: new ArrayBuffer()
+          data: new ArrayBuffer(0)
         })
       ).toBe(false);
     });
@@ -259,23 +271,25 @@ describe('opfs', () => {
       expect(await opfs.file.create({ path: '/a.txt' })).toBe(true);
       expect(await opfs.file.create({ path: '/b.txt' })).toBe(true);
       expect(await opfs.file.create({ path: '/c.txt' })).toBe(true);
-      expect(await opfs.dir.ls({})).toStrictEqual([
-        {
-          name: 'a.txt',
-          fullPath: '/a.txt',
-          type: 'file'
-        },
-        {
-          name: 'b.txt',
-          fullPath: '/b.txt',
-          type: 'file'
-        },
-        {
-          name: 'c.txt',
-          fullPath: '/c.txt',
-          type: 'file'
-        }
-      ]);
+      expect(await opfs.dir.ls({})).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'a.txt',
+            fullPath: '/a.txt',
+            type: 'file'
+          }),
+          expect.objectContaining({
+            name: 'b.txt',
+            fullPath: '/b.txt',
+            type: 'file'
+          }),
+          expect.objectContaining({
+            name: 'c.txt',
+            fullPath: '/c.txt',
+            type: 'file'
+          })
+        ])
+      );
     });
 
     it('can list files recursively in the root directory', async () => {
@@ -284,24 +298,33 @@ describe('opfs', () => {
       expect(
         await opfs.file.create({ path: '/nested/c.txt', recursive: true })
       ).toBe(true);
-      expect(await opfs.dir.ls({ recursive: true })).toStrictEqual([
-        {
-          name: 'a.txt',
-          fullPath: '/a.txt',
-          type: 'file'
-        },
-        {
-          name: 'b.txt',
-          fullPath: '/b.txt',
-          type: 'file'
-        },
-        {
-          name: 'nested',
-          fullPath: '/nested',
-          type: 'directory',
-          children: [{ name: 'c.txt', type: 'file', fullPath: '/nested/c.txt' }]
-        }
-      ]);
+
+      expect(await opfs.dir.ls({ recursive: true })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'a.txt',
+            fullPath: '/a.txt',
+            type: 'file'
+          }),
+          expect.objectContaining({
+            name: 'b.txt',
+            fullPath: '/b.txt',
+            type: 'file'
+          }),
+          expect.objectContaining({
+            name: 'nested',
+            fullPath: '/nested',
+            type: 'directory',
+            children: expect.arrayContaining([
+              expect.objectContaining({
+                name: 'c.txt',
+                type: 'file',
+                fullPath: '/nested/c.txt'
+              })
+            ])
+          })
+        ])
+      );
     });
 
     it('can list files recursively in the root directory as a flat list', async () => {
@@ -310,28 +333,31 @@ describe('opfs', () => {
       expect(
         await opfs.file.create({ path: '/nested/c.txt', recursive: true })
       ).toBe(true);
-      expect(await opfs.dir.ls({ recursive: true, flat: true })).toStrictEqual([
-        {
-          name: 'c.txt',
-          type: 'file',
-          fullPath: '/nested/c.txt'
-        },
-        {
-          name: 'a.txt',
-          fullPath: '/a.txt',
-          type: 'file'
-        },
-        {
-          name: 'b.txt',
-          fullPath: '/b.txt',
-          type: 'file'
-        },
-        {
-          name: 'nested',
-          fullPath: '/nested',
-          type: 'directory'
-        }
-      ]);
+      const l = await opfs.dir.ls({ recursive: true, flat: true });
+      expect(l).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'c.txt',
+            type: 'file',
+            fullPath: '/nested/c.txt'
+          }),
+          expect.objectContaining({
+            name: 'a.txt',
+            fullPath: '/a.txt',
+            type: 'file'
+          }),
+          expect.objectContaining({
+            name: 'b.txt',
+            fullPath: '/b.txt',
+            type: 'file'
+          }),
+          expect.objectContaining({
+            name: 'nested',
+            fullPath: '/nested',
+            type: 'directory'
+          })
+        ])
+      );
     });
 
     it('can move dir', async () => {
