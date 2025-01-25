@@ -31,13 +31,19 @@ export default function AboutFile(props: AboutFileProps) {
         <DialogTitle>About File</DialogTitle>
         <DialogDescription>See file metadata here</DialogDescription>
       </DialogHeader>
-      <div>
+      <div className='grid grid-cols-2'>
         {stats !== null && (
           <>
-            <p>Name: {stats.name}</p>
-            <p>Location: {path}</p>
-            <p>Size: {hrByteSize(stats.size)}</p>
-            <p>Modified: {new Date(stats.updated).toLocaleDateString()}</p>
+            <p>Name:</p>
+            <p>{stats.name}</p>
+            <p>Location:</p>
+            <p>{path}</p>
+            <p>Size:</p>
+            <p>{hrByteSize(stats.size)}</p>
+            <p>MIME:</p>
+            <p>{stats.type ?? 'unknown'}</p>
+            <p>Modified:</p>
+            <p>{new Date(stats.updated).toLocaleDateString()}</p>
           </>
         )}
       </div>

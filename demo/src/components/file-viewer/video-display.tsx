@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react';
 
-export default function VideoDisplay(props: { data: ArrayBuffer }) {
+interface VideoDisplayProps {
+  data: ArrayBuffer;
+}
+
+export default function VideoDisplay(props: VideoDisplayProps) {
   const { data } = props;
   const elementRef = useRef<HTMLVideoElement>(null);
 

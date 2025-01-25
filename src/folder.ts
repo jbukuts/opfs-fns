@@ -2,6 +2,7 @@ import { moveFile } from './file';
 import { deleteItem, DeleteItemOpts, getHandle, splitPath } from './shared';
 import { PathType } from './types';
 import p from 'path-browserify';
+import { fileTypeFromBuffer } from 'file-type';
 
 interface TreeItem {
   name: string;
@@ -54,11 +55,15 @@ export async function ls(opts: LsOpts): Promise<TreeItem[] | null> {
 
       if (type === 'file') {
         promises.push(
-          (handle as FileSystemFileHandle).getFile().then((f) => ({
+          (handle as FileSystemFileHandle).getFile().then(async (f) => ({
             name,
             fullPath,
             type,
-            mime: f.type,
+            mime:
+              f.type === ''
+                ? ((await fileTypeFromBuffer(await f.arrayBuffer()))?.mime ??
+                  '')
+                : f.type,
             size: f.size,
             modified: f.lastModified
           }))
@@ -136,7 +141,14 @@ export async function moveDir(opts: MoveDirOpts) {
       recursive: true,
       flat: true
     });
+
     if (allEntries === null) throw new Error('Error parsing existing dir');
+    allEntries?.sort((a, b) => {
+      if (a.type === 'directory' && b.type === 'file') return -1;
+      if (a.type === 'file' && b.type === 'directory') return 1;
+      return a.fullPath.length - b.fullPath.length;
+    });
+    console.log(allEntries);
 
     const oldArr = splitPath(oldPath);
     const newArr = splitPath(newPath);
@@ -148,9 +160,15 @@ export async function moveDir(opts: MoveDirOpts) {
         ...newArr,
         ...splitPath(fullPath).slice(oldArr.length)
       ];
+      console.log(newFullPath, type);
       if (type === 'directory')
-        createDir({ path: newFullPath, recursive: true });
-      else moveFile({ path: fullPath, newPath: newFullPath, recursive: true });
+        await createDir({ path: newFullPath, recursive: true });
+      else
+        await moveFile({
+          oldPath: fullPath,
+          newPath: newFullPath,
+          recursive: true
+        });
     }
 
     await deleteDir({ path: oldPath });
@@ -172,7 +190,7 @@ export async function renameDir(opts: RenameDirOpts) {
   const arr = splitPath(oldPath);
   return moveDir({
     oldPath,
-    newPath: [...arr.slice(0, -1), newName].join('/')
+    newPath: [...arr.slice(0, -1), newName]
   });
 }
 

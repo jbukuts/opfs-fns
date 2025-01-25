@@ -13,7 +13,14 @@ export default function TextEdit(props: { data: ArrayBuffer; path: string }) {
 
   const debounced = useDebounceCallback((t: string) => {
     opfs.file.write({ path, data: t }).then((s) => {
-      if (!s) return;
+      if (!s) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to autosave',
+          description: `Failed to save changes to ${path}`
+        });
+        return;
+      }
       toast({
         title: 'Autosaved',
         description: `Changes saved to ${path}`

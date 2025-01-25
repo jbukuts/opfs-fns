@@ -158,9 +158,9 @@ describe('opfs', () => {
         true
       );
       expect(await opfs.file.read({ path: a, type: 'text' })).toBe(data);
-      expect(await opfs.file.mv({ path: a, newPath: b, recursive: true })).toBe(
-        true
-      );
+      expect(
+        await opfs.file.mv({ oldPath: a, newPath: b, recursive: true })
+      ).toBe(true);
       expect(await opfs.file.read({ path: b, type: 'text' })).toBe(data);
       expect(await opfs.file.exists(a)).toBe(false);
     });
@@ -172,7 +172,10 @@ describe('opfs', () => {
 
       expect(await opfs.file.create({ path: a, data })).toBe(true);
       expect(await opfs.file.read({ path: a, type: 'text' })).toBe(data);
-      expect(await opfs.file.rename({ path: a, newName: b })).toBe(true);
+      expect(await opfs.file.rename({ oldPath: a, newName: 'b.txt' })).toBe(
+        true
+      );
+
       expect(await opfs.file.exists(a)).toBe(false);
       expect(await opfs.file.exists(b)).toBe(true);
       expect(await opfs.file.read({ path: b, type: 'text' })).toBe(data);
@@ -187,7 +190,7 @@ describe('opfs', () => {
     it('will fail to move file from nonexistent path', async () => {
       expect(
         await opfs.file.mv({
-          path: '/fake/test.txt',
+          oldPath: '/fake/test.txt',
           newPath: '/another/fake/test.txt'
         })
       ).toBe(false);
@@ -200,7 +203,7 @@ describe('opfs', () => {
       );
       expect(await opfs.file.exists(oldPath)).toBe(true);
       expect(
-        await opfs.file.mv({ path: oldPath, newPath: '/another/fake/test.txt' })
+        await opfs.file.mv({ oldPath, newPath: '/another/fake/test.txt' })
       ).toBe(false);
     });
 

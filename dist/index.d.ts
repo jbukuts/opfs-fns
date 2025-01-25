@@ -12,7 +12,7 @@ interface CreateFileOpts {
 }
 interface ReadFileOpts {
     path: PathType;
-    type: keyof Pick<File, 'bytes' | 'text'>;
+    type: 'bytes' | 'text';
 }
 interface WriteFileOpts {
     path: string | string[];
@@ -21,12 +21,12 @@ interface WriteFileOpts {
 }
 type DeleteFileOpts = Omit<DeleteItemOpts, 'type'>;
 interface MoveFileOpts {
-    path: PathType;
+    oldPath: PathType;
     newPath: PathType;
     recursive?: boolean;
 }
 interface RenameFileOpts {
-    path: string;
+    oldPath: PathType;
     newName: string;
 }
 interface FileStat {

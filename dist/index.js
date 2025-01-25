@@ -1,6 +1,7 @@
 'use strict';
 
 var p = require('path-browserify');
+var fileType = require('file-type');
 
 const ABSOLUTE_PATH_REGEX = /^(\/([^/\0]+\/?)*|\/)$/;
 async function getRoot() {
@@ -51,11 +52,12 @@ async function deleteItem(opts) {
 async function statFile(path) {
   try {
     const handle = await getHandle({ type: "file", path });
-    const { name, size, lastModified: updated, type } = await handle.getFile();
+    const file = await handle.getFile();
+    const { name, size, lastModified: updated, type } = file;
     return {
       name,
-      type,
-      dir: "",
+      type: type === "" ? (await fileType.fileTypeFromBuffer(await file.arrayBuffer()))?.mime ?? "" : type,
+      dir: Array.isArray(path) ? "/" + path.slice(0, -1).join("/") : path.slice(0, -name.length),
       size,
       updated
     };
@@ -95,8 +97,7 @@ async function readFile(opts) {
     }).then((h) => h.getFile());
     if (type === "bytes") return file.arrayBuffer();
     else return file.text();
-  } catch (e) {
-    console.log(e);
+  } catch {
     return null;
   }
 }
@@ -115,7 +116,8 @@ async function writeFile(opts) {
     );
     await writable.close();
     return true;
-  } catch {
+  } catch (err) {
+    console.error(err);
     return false;
   }
 }
@@ -126,9 +128,9 @@ async function deleteFile(opts) {
   return deleteItem({ ...opts, type: "file" });
 }
 async function moveFile(opts) {
-  const { path, newPath, recursive = false } = opts;
+  const { oldPath, newPath, recursive = false } = opts;
   try {
-    const oldData = await readFile({ path, type: "bytes" });
+    const oldData = await readFile({ path: oldPath, type: "bytes" });
     if (oldData === null) throw new Error("No such file");
     const created = await createFile({
       path: newPath,
@@ -136,18 +138,18 @@ async function moveFile(opts) {
       data: oldData
     });
     if (!created) throw new Error("Unable to create new file");
-    await deleteFile({ path });
+    await deleteFile({ path: oldPath });
     return true;
   } catch {
     return false;
   }
 }
 async function renameFile(opts) {
-  const { path, newName } = opts;
-  const folders = splitPath(path);
+  const { oldPath, newName } = opts;
+  const folders = splitPath(oldPath);
   return moveFile({
-    path,
-    newPath: [...folders.slice(0, -1), newName].join("/"),
+    oldPath,
+    newPath: [...folders.slice(0, -1), newName],
     recursive: false
   });
 }
@@ -171,11 +173,11 @@ async function ls(opts) {
       const { kind: type } = handle;
       if (type === "file") {
         promises.push(
-          handle.getFile().then((f) => ({
+          handle.getFile().then(async (f) => ({
             name,
             fullPath,
             type,
-            mime: f.type,
+            mime: f.type === "" ? (await fileType.fileTypeFromBuffer(await f.arrayBuffer()))?.mime ?? "" : f.type,
             size: f.size,
             modified: f.lastModified
           }))
@@ -228,6 +230,12 @@ async function moveDir(opts) {
       flat: true
     });
     if (allEntries === null) throw new Error("Error parsing existing dir");
+    allEntries?.sort((a, b) => {
+      if (a.type === "directory" && b.type === "file") return -1;
+      if (a.type === "file" && b.type === "directory") return 1;
+      return a.fullPath.length - b.fullPath.length;
+    });
+    console.log(allEntries);
     const oldArr = splitPath(oldPath);
     const newArr = splitPath(newPath);
     for (const entry of allEntries) {
@@ -236,9 +244,15 @@ async function moveDir(opts) {
         ...newArr,
         ...splitPath(fullPath).slice(oldArr.length)
       ];
+      console.log(newFullPath, type);
       if (type === "directory")
-        createDir({ path: newFullPath, recursive: true });
-      else moveFile({ path: fullPath, newPath: newFullPath, recursive: true });
+        await createDir({ path: newFullPath, recursive: true });
+      else
+        await moveFile({
+          oldPath: fullPath,
+          newPath: newFullPath,
+          recursive: true
+        });
     }
     await deleteDir({ path: oldPath });
     return true;
@@ -252,7 +266,7 @@ async function renameDir(opts) {
   const arr = splitPath(oldPath);
   return moveDir({
     oldPath,
-    newPath: [...arr.slice(0, -1), newName].join("/")
+    newPath: [...arr.slice(0, -1), newName]
   });
 }
 async function emptyDir(path = "/") {

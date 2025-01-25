@@ -6,6 +6,11 @@ import { createElement, useEffect, useState } from 'react';
 import opfs from 'opfs-fns';
 
 type DisplayComp = typeof TextEdit | typeof VideoDisplay | typeof ImageDisplay;
+
+function Unknown() {
+  return <p>Cannot display. Unknown MIME type.</p>;
+}
+
 const MIME_COMP_MAP = new Proxy<Record<string, DisplayComp>>(
   {
     text: TextEdit,
@@ -16,7 +21,7 @@ const MIME_COMP_MAP = new Proxy<Record<string, DisplayComp>>(
     get(target, prop, rec) {
       if (typeof prop !== 'string') return File;
       const [a] = prop.split('/');
-      if (!(a in target)) return TextEdit;
+      if (!(a in target)) return Unknown;
       return Reflect.get(target, a, rec);
     }
   }
@@ -35,9 +40,10 @@ export default function FileViewer() {
 
     const loader = async () => {
       setData(undefined);
-      const meta = await opfs.file.stat(currentPath);
-      if (meta === null) return;
-      setType(meta.type.split('/')[0]);
+
+      const stats = await opfs.file.stat(currentPath);
+      if (stats === null) return;
+      setType(stats.type.split('/')[0]);
 
       const d = await opfs.file.read({ path: currentPath, type: 'bytes' });
       if (d === null) return;
@@ -57,7 +63,10 @@ export default function FileViewer() {
       )}
       {data !== undefined &&
         currentPath !== '' &&
-        createElement(MIME_COMP_MAP[type ?? ''], { data, path: currentPath })}
+        createElement(MIME_COMP_MAP[type ?? ''], {
+          data,
+          path: currentPath
+        })}
     </div>
   );
 }

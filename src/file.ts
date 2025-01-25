@@ -1,5 +1,6 @@
 import { splitPath, deleteItem, DeleteItemOpts, getHandle } from './shared';
 import { PathType } from './types';
+import { fileTypeFromBuffer } from 'file-type';
 
 interface CreateFileOpts {
   path: PathType;
@@ -9,7 +10,7 @@ interface CreateFileOpts {
 
 interface ReadFileOpts {
   path: PathType;
-  type: keyof Pick<File, 'bytes' | 'text'>;
+  type: 'bytes' | 'text';
 }
 
 interface WriteFileOpts {
@@ -21,13 +22,13 @@ interface WriteFileOpts {
 type DeleteFileOpts = Omit<DeleteItemOpts, 'type'>;
 
 interface MoveFileOpts {
-  path: PathType;
+  oldPath: PathType;
   newPath: PathType;
   recursive?: boolean;
 }
 
 interface RenameFileOpts {
-  path: string;
+  oldPath: PathType;
   newName: string;
 }
 
@@ -47,11 +48,18 @@ interface FileStat {
 export async function statFile(path: PathType): Promise<FileStat | null> {
   try {
     const handle = await getHandle({ type: 'file', path });
-    const { name, size, lastModified: updated, type } = await handle.getFile();
+    const file = await handle.getFile();
+    const { name, size, lastModified: updated, type } = file;
+
     return {
       name: name,
-      type,
-      dir: '',
+      type:
+        type === ''
+          ? ((await fileTypeFromBuffer(await file.arrayBuffer()))?.mime ?? '')
+          : type,
+      dir: Array.isArray(path)
+        ? '/' + path.slice(0, -1).join('/')
+        : path.slice(0, -name.length),
       size: size,
       updated
     };
@@ -107,8 +115,7 @@ export async function readFile(opts: ReadFileOpts) {
 
     if (type === 'bytes') return file.arrayBuffer();
     else return file.text();
-  } catch (e) {
-    console.log(e);
+  } catch {
     return null;
   }
 }
@@ -134,7 +141,8 @@ export async function writeFile(opts: WriteFileOpts) {
     );
     await writable.close();
     return true;
-  } catch {
+  } catch (err) {
+    console.error(err);
     return false;
   }
 }
@@ -163,10 +171,10 @@ export async function deleteFile(opts: DeleteFileOpts) {
  * @returns boolean representing whether move was successful.
  */
 export async function moveFile(opts: MoveFileOpts) {
-  const { path, newPath, recursive = false } = opts;
+  const { oldPath, newPath, recursive = false } = opts;
 
   try {
-    const oldData = await readFile({ path, type: 'bytes' });
+    const oldData = await readFile({ path: oldPath, type: 'bytes' });
     if (oldData === null) throw new Error('No such file');
     const created = await createFile({
       path: newPath,
@@ -174,7 +182,7 @@ export async function moveFile(opts: MoveFileOpts) {
       data: oldData
     });
     if (!created) throw new Error('Unable to create new file');
-    await deleteFile({ path });
+    await deleteFile({ path: oldPath });
     return true;
   } catch {
     return false;
@@ -187,11 +195,11 @@ export async function moveFile(opts: MoveFileOpts) {
  * @returns boolean representing whether rename was successful.
  */
 export async function renameFile(opts: RenameFileOpts) {
-  const { path, newName } = opts;
-  const folders = splitPath(path);
+  const { oldPath, newName } = opts;
+  const folders = splitPath(oldPath);
   return moveFile({
-    path,
-    newPath: [...folders.slice(0, -1), newName].join('/'),
+    oldPath,
+    newPath: [...folders.slice(0, -1), newName],
     recursive: false
   });
 }

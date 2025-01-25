@@ -55,7 +55,6 @@ export default function ImportItem(props: ImportItemProps) {
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    console.log(selectedFile);
     if (!selectedFile) return;
 
     if (selectedFile.size > 2147483648)

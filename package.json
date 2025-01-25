@@ -16,7 +16,9 @@
   "author": "Jake Bukuts <jbukuts@gmail.com> (https://www.jbukuts.com/)",
   "license": "ISC",
   "description": "Simple wrapper allowing for interaction with the OPFS via basic POSIX path strings/arrays",
-  "workspaces": ["demo"],
+  "workspaces": [
+    "demo"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace=demo",
     "build:demo": "npm run build --workspace=demo",
@@ -26,6 +28,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "file-type": "^20.0.0",
     "path-browserify": "^1.0.1"
   },
   "devDependencies": {

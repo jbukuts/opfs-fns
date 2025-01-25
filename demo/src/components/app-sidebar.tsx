@@ -8,9 +8,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub
+  SidebarMenuButton
 } from './ui/sidebar';
 import {
   File,
@@ -19,33 +17,20 @@ import {
   FilePlus,
   FileText,
   FileVideo,
-  Folder,
-  FolderOpen,
   FolderPlus,
   Import,
   LucideIcon,
   RefreshCw
 } from 'lucide-react';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from './ui/collapsible';
 import opfs from 'opfs-fns';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger
 } from './ui/context-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from './ui/dialog';
+import { Dialog, DialogTrigger } from './ui/dialog';
 import useFileTree, { TreeItem } from '#/hooks/use-file-tree';
 import { hrByteSize, refreshFileTree } from '#/lib/utils';
 import CreateItem from './create-item';
@@ -53,6 +38,8 @@ import ImportItem from './import-item';
 import AboutFile from './about-file';
 import { createElement, useEffect, useState } from 'react';
 import useCurrentPath from '#/hooks/use-current-path';
+import RenameItemDialog from './rename-item-dialog';
+import DirTreeItem from './dir-tree-item';
 
 const special: Record<string, LucideIcon> = {
   javascript: FileCode
@@ -75,94 +62,75 @@ const FILE_ICONS = new Proxy<Record<string, LucideIcon>>(
   }
 );
 
-function Tree({ items }: { items: TreeItem }) {
+function FileTreeItem(props: { fullPath: string; mime: string; name: string }) {
+  const { fullPath, mime, name } = props;
   const [currentPath, setCurrentPath] = useCurrentPath();
+  const [dialogType, setDialogType] = useState<'rename' | 'stats'>();
 
+  const handleDelete = () => {
+    opfs.file.delete({ path: fullPath }).then(() => {
+      refreshFileTree();
+      if (currentPath === fullPath || currentPath.startsWith(fullPath))
+        setCurrentPath('');
+    });
+  };
+
+  return (
+    <Dialog
+      open={dialogType !== undefined}
+      onOpenChange={() => setDialogType(undefined)}>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <SidebarMenuButton
+            onClick={() => setCurrentPath(fullPath)}
+            isActive={fullPath === currentPath}
+            className='data-[active=true]:bg-transparent'>
+            {createElement(FILE_ICONS[mime!])}
+            {name}
+          </SidebarMenuButton>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem>Copy Path</ContextMenuItem>
+          <ContextMenuItem onClick={() => setDialogType('stats')}>
+            File Stats
+          </ContextMenuItem>
+          <ContextMenuSeparator></ContextMenuSeparator>
+          <ContextMenuItem onClick={() => setDialogType('rename')}>
+            Rename
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleDelete}>Delete</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      {dialogType === 'stats' && <AboutFile path={fullPath} />}
+      {dialogType === 'rename' && (
+        <RenameItemDialog name={name} type={'file'} fullPath={fullPath} />
+      )}
+    </Dialog>
+  );
+}
+
+export function Tree({ items }: { items: TreeItem }) {
   return items.map((entry) => {
     const { name, children, fullPath, type } = entry;
 
-    const handleDelete = () => {
-      opfs[type === 'file' ? 'file' : 'dir']
-        .delete({ path: fullPath })
-        .then(() => {
-          refreshFileTree();
-          if (currentPath === fullPath || currentPath.startsWith(fullPath))
-            setCurrentPath('');
-        });
-    };
-
-    const handleEmpty = () => {
-      opfs.dir.empty(fullPath).then(() => {
-        refreshFileTree();
-      });
-    };
-
-    if (!children) {
+    if (!children)
       return (
-        <Dialog key={`${name}-${type}`}>
-          <ContextMenu>
-            <ContextMenuTrigger asChild>
-              <SidebarMenuButton
-                onClick={() => setCurrentPath(fullPath)}
-                isActive={fullPath === currentPath}
-                className='data-[active=true]:bg-transparent'>
-                {createElement(FILE_ICONS[entry.mime!])}
-                {name}
-              </SidebarMenuButton>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <DialogTrigger asChild>
-                <ContextMenuItem>About File</ContextMenuItem>
-              </DialogTrigger>
-              <ContextMenuItem onClick={handleDelete}>
-                Delete file
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>About File</DialogTitle>
-              <DialogDescription>See file metadata here</DialogDescription>
-            </DialogHeader>
-            <AboutFile path={fullPath} />
-          </DialogContent>
-        </Dialog>
+        <FileTreeItem
+          key={`${name}-${type}`}
+          fullPath={fullPath}
+          name={name}
+          mime={entry.mime!}
+        />
       );
-    }
 
-    return (
-      <SidebarMenuItem key={`${name}-${type}`}>
-        <Collapsible className='group/collapsible [&>button>svg:nth-child(2)]:hidden [&[data-state=open]>button>svg:first-child]:hidden [&[data-state=open]>button>svg:nth-child(2)]:block'>
-          <ContextMenu>
-            <ContextMenuTrigger asChild>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton>
-                  <Folder />
-                  <FolderOpen />
-                  {name}
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem onClick={handleEmpty}>Empty</ContextMenuItem>
-              <ContextMenuItem onClick={handleDelete}>Delete</ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-          {children.length > 0 && (
-            <CollapsibleContent>
-              <SidebarMenuSub className='mr-0 pr-0'>
-                <Tree items={children} />
-              </SidebarMenuSub>
-            </CollapsibleContent>
-          )}
-        </Collapsible>
-      </SidebarMenuItem>
-    );
+    return <DirTreeItem key={`${name}-${type}`} {...entry} />;
   });
 }
 
 export default function AppSidebar() {
   const fileTree = useFileTree();
+  const [dirOpen, setDirOpen] = useState(false);
+  const [fileOpen, setFileOpen] = useState(false);
   const [estimate, setEstimate] = useState<StorageEstimate>({
     usage: 0,
     quota: 1
@@ -210,16 +178,22 @@ export default function AppSidebar() {
           </p>
 
           <div className='flex gap-0.5'>
-            <CreateItem type='file'>
-              <Button variant={'ghost'} size={'icon'}>
-                <FilePlus />
-              </Button>
-            </CreateItem>
-            <CreateItem type='directory'>
-              <Button variant={'ghost'} size={'icon'}>
-                <FolderPlus />
-              </Button>
-            </CreateItem>
+            <Dialog open={fileOpen} onOpenChange={setFileOpen}>
+              <DialogTrigger asChild>
+                <Button variant={'ghost'} size={'icon'}>
+                  <FilePlus />
+                </Button>
+              </DialogTrigger>
+              <CreateItem type='file' close={() => setFileOpen(false)} />
+            </Dialog>
+            <Dialog open={dirOpen} onOpenChange={setDirOpen}>
+              <DialogTrigger asChild>
+                <Button variant={'ghost'} size={'icon'}>
+                  <FolderPlus />
+                </Button>
+              </DialogTrigger>
+              <CreateItem type='directory' close={() => setDirOpen(false)} />
+            </Dialog>
             <ImportItem>
               <Button variant={'ghost'} size={'icon'}>
                 <Import />
