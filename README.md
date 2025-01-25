@@ -86,13 +86,6 @@ const exist = await opfs.dir.exists('/nested/dir')
 console.log(exist) // expect true
 ```
 
-#### Writing byte data to a file
-
-The `data` param in both the `create` and `write` can also accept byte data
-
-```ts
-```
-
 ## Limitations
 
 Operations are to be executed in a vaacuum with no knowledge of what the filesystem currently looks like. This is done so that no side effects occur if you decide to manually mutate the OPFS outside this wrapper APIs functions.
