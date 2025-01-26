@@ -2,7 +2,7 @@
 
 Simple wrapper allowing for interaction with the OPFS via basic POSIX path strings/arrays.
 
-Don't know what the OPFS is? Read about it [here]().
+Don't know what the OPFS is? Read about it [here](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system).
 
 ## Motivation
 
