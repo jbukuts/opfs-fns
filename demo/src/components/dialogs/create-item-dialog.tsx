@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button } from './ui/button';
+import { Button } from '#/components/ui/button';
 import {
   DialogClose,
   DialogContent,
@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from './ui/dialog';
-import { Input } from './ui/input';
+} from '#/components/ui/dialog';
+import { Input } from '#/components/ui/input';
 import opfs from 'opfs-fns';
 import { refreshFileTree } from '#/lib/utils';
 import { useToast } from '#/hooks/use-toast';
@@ -60,7 +60,7 @@ export default function CreateItem(props: CreateItemProps) {
         </DialogDescription>
       </DialogHeader>
       <div>
-        <div className='flex h-9 items-center overflow-hidden rounded-md border border-gray-800 focus-within:ring-1 focus-within:ring-gray-300 focus-within:ring-offset-1'>
+        <div className='flex h-9 items-center overflow-hidden rounded-md border border-gray-800 focus-within:ring-1 focus-within:ring-gray-300'>
           <span className='flex h-full items-center border-r border-gray-800 bg-gray-800/25 px-2 text-xs'>
             <code>{startingPath}</code>
           </span>

@@ -5,14 +5,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle
-} from './ui/dialog';
+} from '../ui/dialog';
 import { hrByteSize } from '#/lib/utils';
 
 interface AboutFileProps {
   path: string;
 }
 
-export default function AboutFile(props: AboutFileProps) {
+export default function AboutFileDialog(props: AboutFileProps) {
   const { path } = props;
 
   const [stats, setStats] = useState<Awaited<

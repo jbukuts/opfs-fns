@@ -4,6 +4,9 @@ import VideoDisplay from './video-display';
 import useCurrentPath from '#/hooks/use-current-path';
 import { createElement, useEffect, useState } from 'react';
 import opfs from 'opfs-fns';
+import ImportItem from '../dialogs/import-item-dialog';
+import { Button } from '../ui/button';
+import { SidebarTrigger } from '../ui/sidebar';
 
 type DisplayComp = typeof TextEdit | typeof VideoDisplay | typeof ImageDisplay;
 
@@ -56,9 +59,19 @@ export default function FileViewer() {
 
   return (
     <div className='h-full'>
+      <SidebarTrigger className='fixed right-0'></SidebarTrigger>
       {currentPath === '' && (
-        <div className='flex h-full items-center justify-center'>
+        <div className='flex h-full flex-col items-center justify-center gap-1.5'>
           <p className='font-semibold'>Select a file from the explorer</p>
+          <p className='text-xs font-light'>or</p>
+          <ImportItem>
+            <Button
+              size={'lg'}
+              variant={'ghost'}
+              className='border border-dashed border-gray-700'>
+              Import File
+            </Button>
+          </ImportItem>
         </div>
       )}
       {data !== undefined &&

@@ -1,5 +1,5 @@
 import { ChangeEvent, ReactNode, useState } from 'react';
-import { Button } from './ui/button';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogClose,
@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger
-} from './ui/dialog';
-import { Input } from './ui/input';
+} from '../ui/dialog';
+import { Input } from '../ui/input';
 import opfs from 'opfs-fns';
 import { refreshFileTree } from '#/lib/utils';
 import { useToast } from '#/hooks/use-toast';
